@@ -1,0 +1,9 @@
+The game board is a 6x7 grid stored as a 2D array where 0 represents an empty cell, 1 represents Player 1’s moves, and 2 represents Player 2’s moves.
+
+Each player is represented by a separate GPU (GPU 0 for Player 1, GPU 1 for Player 2). The game logic uses CUDA to make moves in parallel:
+
+A CUDA kernel randomly selects a column for a player’s move and places the token in the lowest available row. Moves are only valid if there is space in the selected column. 
+
+After each move, the board is synchronized between the two GPUs.
+
+The game alternates between players, and after each move, the board is printed to the console. The game continues until one player wins, and the program halts.

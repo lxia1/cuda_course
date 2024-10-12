@@ -1,0 +1,43 @@
+Overall Structure of the Code
+Main Function (main):Initializes the game and calls play_game() to manage gameplay between two GPUs. Handles memory allocation, GPU setup, and game flow.
+
+Game Loop (play_game): This function manages the main game loop and alternates between two GPUs (one for each player). 
+    Each iteration represents a turn for one player:
+        It calls the CUDA kernel make_move to place the player's token on the board.
+        The updated board is copied back to the host.
+        The updated board state is then synchronized with the other GPU.
+        It prints the board state and checks for a winning condition using the host function check_win_host.
+
+Move Generation (make_move Kernel): This CUDA kernel runs on the GPU for the current player and selects a column for the player's token. It uses curand to generate a random column and checks the rows in that column for the first empty space (starting from the bottom). Once a valid move is made, it updates the board and signals that the move is complete.
+
+Win Condition Check (check_win on Device, check_win_host on Host): Device Function check_win checks for four consecutive tokens of the same player, horizontally, vertically, or diagonally.  After each turn, the game state is copied back to the host, where host function check_win_host checks for winning conditions. It performs the same checks as the device function but operates on the host for easier debugging and control flow.
+
+Random Initialization (init_random Kernel): This CUDA kernel initializes the random number generator states on each GPU using curand_init to seed each player’s randomness.
+
+Specific Algorithms and Kernels of Interest
+make_move Kernel:
+    Purpose: Implements the core logic of making a move for a player. It randomly selects a column and finds the first available row in that column.
+    Algorithm:
+        A random column is generated using curand.
+        The kernel then checks each row in that column (from bottom to top) to find the first empty slot (board[row * COLS + col] == 0).
+        Once an empty spot is found, the player’s token is placed (board[row * COLS + col] = player).
+        This ensures no two players make a move in the same cell.
+check_win (Device Function) and check_win_host (Host Function):
+    Purpose: Checks if the current player has won by looking for four consecutive tokens either horizontally, vertically, or diagonally.
+    Algorithm:
+        The function iterates over the entire board and for each cell, checks in all directions (right, down, diagonal down-right, and diagonal down-left) if there are four consecutive matching tokens.
+        If a winning sequence is found, it returns true.
+init_random Kernel:
+    Purpose: Initializes the random state for each thread on the GPU using curand_init to ensure that each player’s move generation is independent and non-deterministic.
+    Algorithm:
+        Uses curand_init with a seed to initialize the state for random number generation.
+
+Memory Management and Synchronization
+Board Representation: The board is a 6x7 grid stored as a 2D array on both GPUs. Memory is allocated for the board on both GPUs and synchronized between them after each turn.
+Move Synchronization: After each player’s move, the updated board state is copied back from the current player's GPU to the host using cudaMemcpy. The host then copies the updated board state to the other GPU to ensure synchronization between both devices.
+
+Flow Control
+Turn Handling: The game alternates between Player 1 (GPU 0) and Player 2 (GPU 1). After each turn, the board is updated, printed, and checked for a win.
+Win Condition:The game continuously checks for winning conditions after each move, and when a player wins, the game exits the loop and declares the winner.
+
+This design ensures parallelism with two GPUs while maintaining game integrity by synchronizing the board state after every move.
